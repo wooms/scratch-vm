@@ -1,5 +1,6 @@
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
+const Base64Util = require('../../util/base64-util');
 const formatMessage = require('format-message');
 
 const GCubeProtocol = require('../../extension-support/roborisen-support');
@@ -28,7 +29,39 @@ class RoborisenGCube1Blocks {
         this._peripheral = new Gcube1(this.runtime, RoborisenGCube1Blocks.EXTENSION_ID);
 
         this._mDevice = null;
+        this.rxCharacteristic = null;
+        this.txCharacteristic = null;
+        this.queue = [];
+
         this.inActionGube1 = false;
+    }
+
+    async enqueue (data) {
+        // console.log(`Send : ${String(PingPongUtil.byteToString(data))}`)
+        for (let i = 0; i < data.length; i += 20) {
+            const chunk = data.slice(i, i + 20);
+            this.queue.push(chunk);
+        }
+        await this.processQueue();
+    }
+
+    async processQueue () {
+        if (this.isSending || this.queue.length === 0) {
+            return;
+        }
+
+        this.isSending = true;
+
+        while (this.queue.length > 0) {
+            const dataChunk = this.queue.shift();
+            await this.sendData(dataChunk);
+        }
+
+        this.isSending = false;
+    }
+
+    async sendData (packet) {
+        await this.rxCharacteristic?.writeValue(packet);
     }
 
     getInfo () {
@@ -82,8 +115,47 @@ class RoborisenGCube1Blocks {
                         SPEED: {
                             type: ArgumentType.NUMBER,
                             defaultValue: 0
+                        }
+                    }
+                },
+                {
+                    opcode: 'setStep',
+                    text: formatMessage({
+                        id: 'setStep',
+                        default: 'setStep - Speed :[SPEED], Step :[STEP]',
+                        description: 'setStep'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        SPEED: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 0
                         },
                         STEP: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 0
+                        }
+                    }
+                },
+                '---',
+                {
+                    opcode: 'setMatrixXY',
+                    text: formatMessage({
+                        id: 'setMatrixXY',
+                        default: 'setMatrixXY - X :[X], Y :[Y], On/Off :[ONOFF]',
+                        description: 'setMatrixXY'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        X: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 0
+                        },
+                        Y: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 0
+                        },
+                        ONOFF: {
                             type: ArgumentType.NUMBER,
                             defaultValue: 0
                         }
@@ -104,10 +176,15 @@ class RoborisenGCube1Blocks {
             // console.log('Bluetooth device connected:', this._server);
     
             const service = await this._server.getPrimaryService(bleNusServiceUUID);
-            const characteristic = await service.getCharacteristic(bleNusCharTXUUID);
-            await characteristic.startNotifications();
-    
-            characteristic.addEventListener('characteristicvaluechanged', this.handleNotifications.bind(this));
+
+            this.rxCharacteristic = await service.getCharacteristic(bleNusCharRXUUID);
+            this.txCharacteristic = await service.getCharacteristic(bleNusCharTXUUID);
+            await this.txCharacteristic.startNotifications();
+
+            this.txCharacteristic.addEventListener('characteristicvaluechanged', this.handleNotifications.bind(this));
+
+            this.sendData(GCubeProtocol.getOrangeForSoundData());
+
         } catch (error) {
             // console.error('Error connecting to Bluetooth device:', error);
         }
@@ -115,11 +192,10 @@ class RoborisenGCube1Blocks {
     
     handleNotifications (event) {
         const value = event.target.value;
-        let receivedData = '';
-        for (let i = 0; i < value.byteLength; i++) {
-            receivedData += String.fromCharCode(value.getUint8(i));
+
+        if (value.byteLength !== 0) {
+            console.log(`Receive ${String(GCubeProtocol.byteToStringReceive(event))}`);
         }
-        console.log('Received data:', receivedData.length, receivedData[0]);
     }
 
     changeLED (args) {
@@ -128,12 +204,7 @@ class RoborisenGCube1Blocks {
 
         const ColorLEDData = GCubeProtocol.makeColorLEDData(7, args.RED, args.GREEN, args.BLUE);
 
-        this._mDevice.gatt.getPrimaryService(bleNusServiceUUID)
-            .then(service => service.getCharacteristic(bleNusCharRXUUID))
-            .then(characteristic => characteristic.writeValue(ColorLEDData));
-        // .catch(error => {
-        //     console.error('Error writing value to characteristic:', error);
-        // });
+        this.sendData(ColorLEDData);
 
         return new Promise(resolve => {
             const repeat = setInterval(() => {
@@ -144,16 +215,14 @@ class RoborisenGCube1Blocks {
         });
     }
 
-
     setContinuous (args) {
+        // console.log('setContinuous');
         if (this.inActionGube1 === true) return;
         this.inActionGube1 = true;
 
         const makeContinuousData = GCubeProtocol.makeContinuousData(7, 1, args.SPEED);
 
-        this._mDevice.gatt.getPrimaryService(bleNusServiceUUID)
-            .then(service => service.getCharacteristic(bleNusCharRXUUID))
-            .then(characteristic => characteristic.writeValue(makeContinuousData));
+        this.sendData(makeContinuousData);
 
         return new Promise(resolve => {
             const repeat = setInterval(() => {
@@ -164,6 +233,43 @@ class RoborisenGCube1Blocks {
         });
     }
 
+    setStep (args) {
+        // console.log('setStep', args.SPEED, args.STEP);
+        if (this.inActionGube1 === true) return;
+        this.inActionGube1 = true;
+
+        const makeSingleStepData = GCubeProtocol.makeSingleStep(7, 1, args.SPEED, args.STEP);
+
+        this.sendData(makeSingleStepData);
+
+        return new Promise(resolve => {
+            const repeat = setInterval(() => {
+                this.inActionGube1 = false;
+                clearInterval(repeat);
+                resolve();
+            }, 64);
+        });
+    }
+
+    async setMatrixXY (args) {
+        console.log('setMatrixXY 1');
+        if (this.inActionGube1 === true) return;
+        this.inActionGube1 = true;
+        console.log('setMatrixXY 2');
+        const makeMatrixXYData = GCubeProtocol.makeMatrixXY(7, 1, args.X, 7 - args.Y, args.ONOFF);
+        console.log('setMatrixXY 3');
+        await this.sendData(makeMatrixXYData);
+        console.log('setMatrixXY 4');
+
+        console.log(`Receive ${String(GCubeProtocol.byteToString(makeMatrixXYData))}`);
+        return new Promise(resolve => {
+            const repeat = setInterval(() => {
+                this.inActionGube1 = false;
+                clearInterval(repeat);
+                resolve();
+            }, 64);
+        });
+    }
 
 }
 
