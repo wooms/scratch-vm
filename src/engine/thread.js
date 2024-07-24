@@ -353,7 +353,7 @@ class Thread {
             if (frame.params === null) {
                 continue;
             }
-            if (Object.prototype.hasOwnProperty.call(frame.params, paramName)) {
+            if (frame.params.hasOwnProperty(paramName)) {
                 return frame.params[paramName];
             }
             return null;

@@ -764,14 +764,14 @@ class Runtime extends EventEmitter {
      */
     _registerBlockPackages () {
         for (const packageName in defaultBlockPackages) {
-            if (Object.prototype.hasOwnProperty.call(defaultBlockPackages, packageName)) {
+            if (defaultBlockPackages.hasOwnProperty(packageName)) {
                 // @todo pass a different runtime depending on package privilege?
                 const packageObject = new (defaultBlockPackages[packageName])(this);
                 // Collect primitives from package.
                 if (packageObject.getPrimitives) {
                     const packagePrimitives = packageObject.getPrimitives();
                     for (const op in packagePrimitives) {
-                        if (Object.prototype.hasOwnProperty.call(packagePrimitives, op)) {
+                        if (packagePrimitives.hasOwnProperty(op)) {
                             this._primitives[op] =
                                 packagePrimitives[op].bind(packageObject);
                         }
@@ -781,7 +781,7 @@ class Runtime extends EventEmitter {
                 if (packageObject.getHats) {
                     const packageHats = packageObject.getHats();
                     for (const hatName in packageHats) {
-                        if (Object.prototype.hasOwnProperty.call(packageHats, hatName)) {
+                        if (packageHats.hasOwnProperty(hatName)) {
                             this._hats[hatName] = packageHats[hatName];
                         }
                     }
@@ -851,7 +851,7 @@ class Runtime extends EventEmitter {
         this._fillExtensionCategory(categoryInfo, extensionInfo);
 
         for (const fieldTypeName in categoryInfo.customFieldTypes) {
-            if (Object.prototype.hasOwnProperty.call(extensionInfo.customFieldTypes, fieldTypeName)) {
+            if (extensionInfo.customFieldTypes.hasOwnProperty(fieldTypeName)) {
                 const fieldTypeInfo = categoryInfo.customFieldTypes[fieldTypeName];
 
                 // Emit events for custom field types from extension
@@ -894,7 +894,7 @@ class Runtime extends EventEmitter {
         categoryInfo.menuInfo = {};
 
         for (const menuName in extensionInfo.menus) {
-            if (Object.prototype.hasOwnProperty.call(extensionInfo.menus, menuName)) {
+            if (extensionInfo.menus.hasOwnProperty(menuName)) {
                 const menuInfo = extensionInfo.menus[menuName];
                 const convertedMenu = this._buildMenuForScratchBlocks(menuName, menuInfo, categoryInfo);
                 categoryInfo.menus.push(convertedMenu);
@@ -902,7 +902,7 @@ class Runtime extends EventEmitter {
             }
         }
         for (const fieldTypeName in extensionInfo.customFieldTypes) {
-            if (Object.prototype.hasOwnProperty.call(extensionInfo.customFieldTypes, fieldTypeName)) {
+            if (extensionInfo.customFieldTypes.hasOwnProperty(fieldTypeName)) {
                 const fieldType = extensionInfo.customFieldTypes[fieldTypeName];
                 const fieldTypeInfo = this._buildCustomFieldInfo(
                     fieldTypeName,
@@ -1138,7 +1138,7 @@ class Runtime extends EventEmitter {
             break;
         case BlockType.HAT:
         case BlockType.EVENT:
-            if (!Object.prototype.hasOwnProperty.call(blockInfo, 'isEdgeActivated')) {
+            if (!blockInfo.hasOwnProperty('isEdgeActivated')) {
                 // if absent, this property defaults to true
                 blockInfo.isEdgeActivated = true;
             }
@@ -1584,7 +1584,7 @@ class Runtime extends EventEmitter {
      * @return {boolean} True if the op is known to be a hat.
      */
     getIsHat (opcode) {
-        return Object.prototype.hasOwnProperty.call(this._hats, opcode);
+        return this._hats.hasOwnProperty(opcode);
     }
 
     /**
@@ -1593,7 +1593,7 @@ class Runtime extends EventEmitter {
      * @return {boolean} True if the op is known to be a edge-activated hat.
      */
     getIsEdgeActivatedHat (opcode) {
-        return Object.prototype.hasOwnProperty.call(this._hats, opcode) &&
+        return this._hats.hasOwnProperty(opcode) &&
             this._hats[opcode].edgeActivated;
     }
 
@@ -1817,7 +1817,7 @@ class Runtime extends EventEmitter {
      */
     startHats (requestedHatOpcode,
         optMatchFields, optTarget) {
-        if (!Object.prototype.hasOwnProperty.call(this._hats, requestedHatOpcode)) {
+        if (!this._hats.hasOwnProperty(requestedHatOpcode)) {
             // No known hat with this opcode.
             return;
         }
@@ -1827,7 +1827,7 @@ class Runtime extends EventEmitter {
         const hatMeta = instance._hats[requestedHatOpcode];
 
         for (const opts in optMatchFields) {
-            if (!Object.prototype.hasOwnProperty.call(optMatchFields, opts)) continue;
+            if (!optMatchFields.hasOwnProperty(opts)) continue;
             optMatchFields[opts] = optMatchFields[opts].toUpperCase();
         }
 
@@ -2062,7 +2062,7 @@ class Runtime extends EventEmitter {
         const newTargets = [];
         for (let i = 0; i < this.targets.length; i++) {
             this.targets[i].onStopAll();
-            if (Object.prototype.hasOwnProperty.call(this.targets[i], 'isOriginal') &&
+            if (this.targets[i].hasOwnProperty('isOriginal') &&
                 !this.targets[i].isOriginal) {
                 this.targets[i].dispose();
             } else {
@@ -2097,7 +2097,7 @@ class Runtime extends EventEmitter {
 
         // Find all edge-activated hats, and add them to threads to be evaluated.
         for (const hatType in this._hats) {
-            if (!Object.prototype.hasOwnProperty.call(this._hats, hatType)) continue;
+            if (!this._hats.hasOwnProperty(hatType)) continue;
             const hat = this._hats[hatType];
             if (hat.edgeActivated) {
                 this.startHats(hatType);
@@ -2211,9 +2211,9 @@ class Runtime extends EventEmitter {
      */
     _updateGlows (optExtraThreads) {
         const searchThreads = [];
-        searchThreads.push(...this.threads);
+        searchThreads.push.apply(searchThreads, this.threads);
         if (optExtraThreads) {
-            searchThreads.push(...optExtraThreads);
+            searchThreads.push.apply(searchThreads, optExtraThreads);
         }
         // Set of scripts that request a glow this frame.
         const requestedGlowsThisFrame = [];

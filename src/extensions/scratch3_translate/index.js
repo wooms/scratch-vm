@@ -222,11 +222,11 @@ class Scratch3TranslateBlocks {
     getLanguageCodeFromArg (arg) {
         const languageArg = Cast.toString(arg).toLowerCase();
         // Check if the arg matches a language code in the menu.
-        if (Object.prototype.hasOwnProperty.call(languageNames.menuMap, languageArg)) {
+        if (languageNames.menuMap.hasOwnProperty(languageArg)) {
             return languageArg;
         }
         // Check for a dropped-in language name, and convert to a language code.
-        if (Object.prototype.hasOwnProperty.call(languageNames.nameMap, languageArg)) {
+        if (languageNames.nameMap.hasOwnProperty(languageArg)) {
             return languageNames.nameMap[languageArg];
         }
 

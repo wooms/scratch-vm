@@ -101,7 +101,7 @@ class Target extends EventEmitter {
     }
 
     hasEdgeActivatedValue (blockId) {
-        return Object.prototype.hasOwnProperty.call(this._edgeActivatedHatValues, blockId);
+        return this._edgeActivatedHatValues.hasOwnProperty(blockId);
     }
 
     /**
@@ -186,13 +186,13 @@ class Target extends EventEmitter {
      */
     lookupVariableById (id) {
         // If we have a local copy, return it.
-        if (Object.prototype.hasOwnProperty.call(this.variables, id)) {
+        if (this.variables.hasOwnProperty(id)) {
             return this.variables[id];
         }
         // If the stage has a global copy, return it.
         if (this.runtime && !this.isStage) {
             const stage = this.runtime.getTargetForStage();
-            if (stage && Object.prototype.hasOwnProperty.call(stage.variables, id)) {
+            if (stage && stage.variables.hasOwnProperty(id)) {
                 return stage.variables[id];
             }
         }
@@ -264,7 +264,7 @@ class Target extends EventEmitter {
      * Additional checks are made that the variable can be created as a cloud variable.
      */
     createVariable (id, name, type, isCloud) {
-        if (!Object.prototype.hasOwnProperty.call(this.variables, id)) {
+        if (!this.variables.hasOwnProperty(id)) {
             const newVariable = new Variable(id, name, type, false);
             if (isCloud && this.isStage && this.runtime.canAddCloudVariable()) {
                 newVariable.isCloud = true;
@@ -288,7 +288,7 @@ class Target extends EventEmitter {
      * @param {boolean} minimized Whether the comment is minimized.
      */
     createComment (id, blockId, text, x, y, width, height, minimized) {
-        if (!Object.prototype.hasOwnProperty.call(this.comments, id)) {
+        if (!this.comments.hasOwnProperty(id)) {
             const newComment = new Comment(id, text, x, y,
                 width, height, minimized);
             if (blockId) {
@@ -311,7 +311,7 @@ class Target extends EventEmitter {
      * @param {string} newName New name for the variable.
      */
     renameVariable (id, newName) {
-        if (Object.prototype.hasOwnProperty.call(this.variables, id)) {
+        if (this.variables.hasOwnProperty(id)) {
             const variable = this.variables[id];
             if (variable.id === id) {
                 const oldName = variable.name;
@@ -362,7 +362,7 @@ class Target extends EventEmitter {
      * @param {string} id Id of variable to delete.
      */
     deleteVariable (id) {
-        if (Object.prototype.hasOwnProperty.call(this.variables, id)) {
+        if (this.variables.hasOwnProperty(id)) {
             // Get info about the variable before deleting it
             const deletedVariableName = this.variables[id].name;
             const deletedVariableWasCloud = this.variables[id].isCloud;
@@ -408,7 +408,7 @@ class Target extends EventEmitter {
      * the original variable was not found.
      */
     duplicateVariable (id, optKeepOriginalId) {
-        if (Object.prototype.hasOwnProperty.call(this.variables, id)) {
+        if (this.variables.hasOwnProperty(id)) {
             const originalVariable = this.variables[id];
             const newVariable = new Variable(
                 optKeepOriginalId ? id : null, // conditionally keep original id or generate a new one
@@ -695,7 +695,7 @@ class Target extends EventEmitter {
         const unreferencedLocalVarIds = [];
         if (Object.keys(this.variables).length > 0) {
             for (const localVarId in this.variables) {
-                if (!Object.prototype.hasOwnProperty.call(this.variables, localVarId)) continue;
+                if (!this.variables.hasOwnProperty(localVarId)) continue;
                 if (!allReferences[localVarId]) unreferencedLocalVarIds.push(localVarId);
             }
         }
@@ -720,7 +720,7 @@ class Target extends EventEmitter {
             if (this.lookupVariableById(varId)) {
                 // Found a variable with the id in either the target or the stage,
                 // figure out which one.
-                if (Object.prototype.hasOwnProperty.call(this.variables, varId)) {
+                if (this.variables.hasOwnProperty(varId)) {
                     // If the target has the variable, then check whether the stage
                     // has one with the same name and type. If it does, then rename
                     // this target specific variable so that there is a distinction.
