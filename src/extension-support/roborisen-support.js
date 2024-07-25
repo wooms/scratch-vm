@@ -160,6 +160,37 @@ class GCubeProtocol{
         return data;
     }
 
+    static makeMatrixPictureData (cubeID, cubeCount, pictureData) {
+
+        const data = new Uint8Array(18);
+
+        data[0] = 0xff;
+        data[1] = 0xff;
+        data[2] = 0xff;
+        data[3] = cubeID;
+
+        data[4] = 0x00;
+        data[5] = 0xe2;
+
+        data[6] = 0xa2;
+
+        data[7] = 0x00;
+        data[8] = 0x12;
+
+        data[9] = 0x70;
+
+        data[10] = pictureData[0];
+        data[11] = pictureData[1];
+        data[12] = pictureData[2];
+        data[13] = pictureData[3];
+        data[14] = pictureData[4];
+        data[15] = pictureData[5];
+        data[16] = pictureData[6];
+        data[17] = pictureData[7];
+    
+        return data;
+    }
+
     static intToByte (int) {
         const intToByteData = new Uint8Array(2);
         intToByteData[0] = (int >> 8) & 0xff; // 상위 바이트

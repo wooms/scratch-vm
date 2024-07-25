@@ -1,6 +1,7 @@
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Base64Util = require('../../util/base64-util');
+const cast = require('../../util/cast');
 const formatMessage = require('format-message');
 
 const GCubeProtocol = require('../../extension-support/roborisen-support');
@@ -160,6 +161,21 @@ class RoborisenGCube1Blocks {
                             defaultValue: 0
                         }
                     }
+                },
+                {
+                    opcode: 'setMatrix8',
+                    text: formatMessage({
+                        id: 'setMatrix8',
+                        default: 'setMatrix8 - [MATRIX8]',
+                        description: 'setMatrix8'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        MATRIX8: {
+                            type: ArgumentType.MATRIX8,
+                            defaultValue: '1000000001000000001000000001000000000000000000000000000000000000'
+                        }
+                    }
                 }
             ]
         };
@@ -252,16 +268,43 @@ class RoborisenGCube1Blocks {
     }
 
     async setMatrixXY (args) {
-        console.log('setMatrixXY 1');
         if (this.inActionGube1 === true) return;
         this.inActionGube1 = true;
-        console.log('setMatrixXY 2');
         const makeMatrixXYData = GCubeProtocol.makeMatrixXY(7, 1, args.X, 7 - args.Y, args.ONOFF);
-        console.log('setMatrixXY 3');
         await this.sendData(makeMatrixXYData);
-        console.log('setMatrixXY 4');
 
         console.log(`Receive ${String(GCubeProtocol.byteToString(makeMatrixXYData))}`);
+        return new Promise(resolve => {
+            const repeat = setInterval(() => {
+                this.inActionGube1 = false;
+                clearInterval(repeat);
+                resolve();
+            }, 64);
+        });
+    }
+
+    async setMatrix8 (args) {
+        if (this.inActionGube1 === true) return;
+        this.inActionGube1 = true;
+
+        const argData = cast.toString(args.MATRIX8).replace(/\s/g, '');
+
+        if (argData !== null) {
+
+            const splitData = argData.split('');
+            const pictureData = new Uint8Array(8).fill(0);
+
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    pictureData[(i + 1) % 8] += splitData[j + (8 * (7 - i))] * Math.pow(2, 7 - j);
+                }
+            }
+
+            const makeMatrix8Data = GCubeProtocol.makeMatrixPictureData(7, 1, pictureData);
+            await this.sendData(makeMatrix8Data);
+            console.log(`Receive ${String(GCubeProtocol.byteToString(makeMatrix8Data))}`);
+        }
+        
         return new Promise(resolve => {
             const repeat = setInterval(() => {
                 this.inActionGube1 = false;
