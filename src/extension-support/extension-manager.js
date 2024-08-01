@@ -24,7 +24,8 @@ const builtinExtensions = {
     makeymakey: () => require('../extensions/scratch3_makeymakey'),
     boost: () => require('../extensions/scratch3_boost'),
     gdxfor: () => require('../extensions/scratch3_gdx_for'),
-    gcube1: () => require('../extensions/roborisen_g1')
+    gcube1: () => require('../extensions/roborisen_g1'),
+    gcube2: () => require('../extensions/roborisen_g2')
 };
 
 /**

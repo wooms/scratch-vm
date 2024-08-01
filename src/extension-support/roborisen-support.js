@@ -55,7 +55,37 @@ class GCubeProtocol{
         return data;
     }
 
-    static makeContinuousData (cubeID, cubeCount, speed) {
+    static getSetMultiroleInAction (cubeNum, groupID) {
+        const data = new Uint8Array(11);
+
+        data[0] = 0xff;
+        data[1] = 0xff;
+        data[2] = 0xff;
+        data[3] = 0xff;
+
+        data[4] = cubeNum << 4;
+        data[5] = 0x00;
+
+        data[6] = 0xad;
+
+        data[7] = 0x00;
+        data[8] = 0x0b;
+
+        data[9] = 0x0a;
+        data[10] = 0x00;
+
+        if (groupID === '00') {
+            data[9] = 0x0a;
+            data[10] = 0x00;
+        } else {
+            data[9] = 0x1a;
+            data[10] = parseInt(groupID, 10);
+        }
+
+        return data;
+    }
+
+    static makeContinuousData (cubeID, cubeNum, speed) {
         const data = new Uint8Array(15);
 
         data[0] = 0xff;
@@ -63,7 +93,7 @@ class GCubeProtocol{
         data[2] = 0xff;
         data[3] = cubeID;
 
-        data[4] = cubeCount << 4;
+        data[4] = cubeNum << 4;
         data[5] = 0x00;
 
         data[6] = 0xcc;
@@ -83,7 +113,7 @@ class GCubeProtocol{
         return data;
     }
 
-    static makeSingleStep (cubeID, cubeCount, speed, step) {
+    static makeSingleStep (cubeID, cubeNum, speed, step) {
         const data = new Uint8Array(19);
 
         data[0] = 0xff;
@@ -91,7 +121,7 @@ class GCubeProtocol{
         data[2] = 0xff;
         data[3] = cubeID;
 
-        data[4] = cubeCount << 4;
+        data[4] = cubeNum << 4;
         data[5] = 0x00;
 
         data[6] = 0xc1;
@@ -115,6 +145,73 @@ class GCubeProtocol{
         return data;
     }
 
+    static makeAggregateStep (cubeNum, innerData, method) {
+        const packetSize = 13 + (innerData[0].length * innerData.length);
+        const data = new Uint8Array(packetSize);
+    
+        data[0] = 0xff;
+        data[1] = 0xff;
+        data[2] = 0xff;
+        data[3] = 0xaa;
+    
+        data[4] = cubeNum << 4;
+        data[5] = 0x00;
+
+        data[6] = 0xcd;
+    
+        const packetSizeBytes = GCubeProtocol.intToByte(packetSize);
+        data[7] = packetSizeBytes[0];
+        data[8] = packetSizeBytes[1];
+
+        data[9] = 0x02;
+        // Continuous : 0
+        // Single : 1
+        // ScheduledStep : 3
+        // ScheduledPoint : 4
+        data[10] = method;
+        data[11] = 0x00;
+        data[12] = 0x00;
+    
+        for (let i = 0; i < innerData.length; i++) {
+            for (let j = 0; j < innerData[i].length; j++) {
+                data[13 + (innerData[i].length * i) + j] = innerData[i][j];
+            }
+        }
+    
+        return data;
+    }
+
+    static makePointDatas (start, end) {
+        const data = new Uint8Array(20);
+
+        data[0] = 0xff;
+        data[1] = 0xff;
+        data[2] = 0xff;
+        data[3] = 0xff;
+
+        data[4] = 0x0;
+        data[5] = 0x0;
+
+        data[6] = 0xcb;
+        data[7] = 0x00;
+        data[8] = 0x14;
+        data[9] = 0x02;
+        data[10] = 0x04;
+        data[11] = 0x00;
+        data[12] = 0x02;
+
+        data[13] = 0x0;
+        data[14] = 0x0;
+
+        data[15] = 0x0;
+        data[16] = start;
+        data[17] = 0x0;
+        data[18] = end;
+        data[19] = 0x1;
+
+        return data;
+    }
+
     static getSensorsData (Position, Interval) {
 
         const data = new Uint8Array(11);
@@ -134,7 +231,7 @@ class GCubeProtocol{
         return data;
     }
 
-    static makeMatrixXY (cubeID, cubeCount, x, y, onoff) {
+    static makeMatrixXY (cubeID, cubeNum, x, y, onoff) {
 
         const data = new Uint8Array(13);
 
@@ -160,7 +257,7 @@ class GCubeProtocol{
         return data;
     }
 
-    static makeMatrixPictureData (cubeID, cubeCount, pictureData) {
+    static makeMatrixPictureData (cubeID, cubeNum, pictureData) {
 
         const data = new Uint8Array(18);
 
@@ -189,6 +286,34 @@ class GCubeProtocol{
         data[17] = pictureData[7];
     
         return data;
+    }
+
+    static makeDelayTimeFromSpeedStep (speed, step) {
+        if (speed === 0) {
+            return 0;
+        }
+
+        const delayTime = Math.round(((1100 - speed) / 99) * step);
+
+        return delayTime;
+    }
+
+    static changeSpeedToSps (speed) {
+        let sps = 0;
+    
+        if (speed < 0) {
+            sps = 65536 - (((Math.abs(speed) * 1100) - 10000) / Math.abs(speed));
+        } else if (speed === 0) {
+            sps = 0;
+        } else {
+            sps = ((speed * 1100) - 10000) / speed;
+        }
+    
+        return sps;
+    }
+
+    static changeDegreeToStep (degree) {
+        return (degree * 1980) / 360;
     }
 
     static intToByte (int) {

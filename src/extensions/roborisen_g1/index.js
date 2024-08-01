@@ -75,8 +75,8 @@ class RoborisenGCube1Blocks {
                 {
                     opcode: 'connectG1',
                     text: formatMessage({
-                        id: 'connectG1',
-                        default: 'connectG1',
+                        id: 'gcube1.connectG1',
+                        default: '연결하기',
                         description: 'connectG1'
                     }),
                     blockType: BlockType.COMMAND
@@ -84,8 +84,8 @@ class RoborisenGCube1Blocks {
                 {
                     opcode: 'changeLED',
                     text: formatMessage({
-                        id: 'changeLED',
-                        default: 'changeLED - Red :[RED], Green :[GREEN], Blue :[BLUE]',
+                        id: 'gcube1.changeLED',
+                        default: 'LED 색 바꾸기 - Red :[RED], Green :[GREEN], Blue :[BLUE]',
                         description: 'changeLED'
                     }),
                     blockType: BlockType.COMMAND,
@@ -107,8 +107,8 @@ class RoborisenGCube1Blocks {
                 {
                     opcode: 'setContinuous',
                     text: formatMessage({
-                        id: 'setContinuous',
-                        default: 'setContinuous - Speed :[SPEED]',
+                        id: 'gcube1.setContinuous',
+                        default: '[SPEED]의 속도로 계속 회전하기',
                         description: 'setContinuous'
                     }),
                     blockType: BlockType.COMMAND,
@@ -122,8 +122,8 @@ class RoborisenGCube1Blocks {
                 {
                     opcode: 'setStep',
                     text: formatMessage({
-                        id: 'setStep',
-                        default: 'setStep - Speed :[SPEED], Step :[STEP]',
+                        id: 'gcube1.setStep',
+                        default: '[SPEED]의 속도로 [STEP]도 만큼 회전하기',
                         description: 'setStep'
                     }),
                     blockType: BlockType.COMMAND,
@@ -142,8 +142,8 @@ class RoborisenGCube1Blocks {
                 {
                     opcode: 'setMatrixXY',
                     text: formatMessage({
-                        id: 'setMatrixXY',
-                        default: 'setMatrixXY - X :[X], Y :[Y], On/Off :[ONOFF]',
+                        id: 'gcube1.setMatrixXY',
+                        default: '매트릭스 제어 - X :[X], Y :[Y], On/Off :[ONOFF]',
                         description: 'setMatrixXY'
                     }),
                     blockType: BlockType.COMMAND,
@@ -165,8 +165,8 @@ class RoborisenGCube1Blocks {
                 {
                     opcode: 'setMatrix8',
                     text: formatMessage({
-                        id: 'setMatrix8',
-                        default: 'setMatrix8 - [MATRIX8]',
+                        id: 'gcube1.setMatrix8',
+                        default: '메트릭스 제어 - [MATRIX8]',
                         description: 'setMatrix8'
                     }),
                     blockType: BlockType.COMMAND,
@@ -199,7 +199,7 @@ class RoborisenGCube1Blocks {
 
             this.txCharacteristic.addEventListener('characteristicvaluechanged', this.handleNotifications.bind(this));
 
-            this.sendData(GCubeProtocol.getOrangeForSoundData());
+            this.enqueue(GCubeProtocol.getOrangeForSoundData());
 
         } catch (error) {
             // console.error('Error connecting to Bluetooth device:', error);
@@ -220,7 +220,7 @@ class RoborisenGCube1Blocks {
 
         const ColorLEDData = GCubeProtocol.makeColorLEDData(7, args.RED, args.GREEN, args.BLUE);
 
-        this.sendData(ColorLEDData);
+        this.enqueue(ColorLEDData);
 
         return new Promise(resolve => {
             const repeat = setInterval(() => {
@@ -236,9 +236,9 @@ class RoborisenGCube1Blocks {
         if (this.inActionGube1 === true) return;
         this.inActionGube1 = true;
 
-        const makeContinuousData = GCubeProtocol.makeContinuousData(7, 1, args.SPEED);
+        const makeContinuousData = GCubeProtocol.makeContinuousData(7, 1, GCubeProtocol.changeSpeedToSps(args.SPEED));
 
-        this.sendData(makeContinuousData);
+        this.enqueue(makeContinuousData);
 
         return new Promise(resolve => {
             const repeat = setInterval(() => {
@@ -250,13 +250,17 @@ class RoborisenGCube1Blocks {
     }
 
     setStep (args) {
-        // console.log('setStep', args.SPEED, args.STEP);
         if (this.inActionGube1 === true) return;
         this.inActionGube1 = true;
 
-        const makeSingleStepData = GCubeProtocol.makeSingleStep(7, 1, args.SPEED, args.STEP);
+        const makeSingleStepData = GCubeProtocol.makeSingleStep(
+            7,
+            1,
+            GCubeProtocol.changeSpeedToSps(args.SPEED),
+            GCubeProtocol.changeDegreeToStep(args.STEP)
+        );
 
-        this.sendData(makeSingleStepData);
+        this.enqueue(makeSingleStepData);
 
         return new Promise(resolve => {
             const repeat = setInterval(() => {
@@ -271,7 +275,7 @@ class RoborisenGCube1Blocks {
         if (this.inActionGube1 === true) return;
         this.inActionGube1 = true;
         const makeMatrixXYData = GCubeProtocol.makeMatrixXY(7, 1, args.X, 7 - args.Y, args.ONOFF);
-        await this.sendData(makeMatrixXYData);
+        await this.enqueue(makeMatrixXYData);
 
         console.log(`Receive ${String(GCubeProtocol.byteToString(makeMatrixXYData))}`);
         return new Promise(resolve => {
@@ -301,7 +305,7 @@ class RoborisenGCube1Blocks {
             }
 
             const makeMatrix8Data = GCubeProtocol.makeMatrixPictureData(7, 1, pictureData);
-            await this.sendData(makeMatrix8Data);
+            await this.enqueue(makeMatrix8Data);
             console.log(`Receive ${String(GCubeProtocol.byteToString(makeMatrix8Data))}`);
         }
         
